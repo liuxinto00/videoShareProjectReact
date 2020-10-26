@@ -10,7 +10,6 @@ router.get("/posts", async (req, res, next) => {
 
 router.get("/initialize", async (req, res) => {
   await myDB.initialize();
-
   res.redirect("/");
 });
 
