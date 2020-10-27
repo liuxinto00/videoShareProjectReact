@@ -1,23 +1,47 @@
-var express = require("express");
-var router = express.Router();
+const { MongoClient } = require("mongodb");
 
-const myDB = require("../db/myMongoDB.js");
-/* GET home page. */
-router.get("/posts", async (req, res, next) => {
-  const posts = await myDB.getPosts();
-  res.json(posts);
-});
+function MyDB() {
+  const myDB = {};
+  const uri = process.env.MONGO_URL || "mongodb://localhost:27017";
 
-router.get("/initialize", async (req, res) => {
-  await myDB.initialize();
+  myDB.getPosts = async () => {
+    const client = new MongoClient(uri, { useUnifiedTopology: true });
+    await client.connect();
+    const db = client.db("posts");
+    const posts = db.collection("posts");
+    const query = {};
+    return posts
+      .find(query)
+      .sort({ _id: -1 })
+      .limit(10)
+      .toArray()
+      .finally(() => client.close());
+  };
 
-  res.redirect("/");
-});
+  myDB.initialize = async () => {
+    const client = new MongoClient(uri, { useUnifiedTopology: true });
+    await client.connect();
+    const db = client.db("posts");
+    const posts = db.collection("posts");
 
-router.post("/posts/create", async (req, res) => {
-  const post = req.body;
-  await myDB.createPost(post);
-  res.redirect("/");
-});
+    for (let i = 0; i < 100; i++) {
+      await posts.insertOne({
+        text: "you know" + i,
+        author: "Xintong" + i,
+      });
+    }
+  };
 
-module.exports = router;
+  myDB.createPost = async (post) => {
+    const client = new MongoClient(uri, { useUnifiedTopology: true });
+    await client.connect();
+    const db = client.db("posts");
+    const posts = db.collection("posts");
+    return await posts.insertOne(post);
+  };
+
+  return myDB;
+}
+//MyDB().initialize();
+
+module.exports = MyDB();
